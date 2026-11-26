@@ -1,0 +1,22 @@
+{
+  "name": "@revert/telegraph-client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "dry-run": "tsc -p tsconfig.json && node dist/cli.js --dry-run",
+    "live": "tsc -p tsconfig.json && node dist/cli.js --execute"
+  },
+  "dependencies": {
+    "@revert/shared": "*",
+    "@x402/fetch": "^2.32.0",
+    "@x402/evm": "^2.32.0",
+    "viem": "^2.38.0",
+    "zod": "^3.25.0"
+  }
+}

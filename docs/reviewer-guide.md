@@ -10,11 +10,14 @@
    ```bash
    npm run check
    ```
-3. **Run the bounded Telegraph dry-run integration spike (zero spend):**
+3. **Run the reusable Telegraph client dry-run (zero spend, inspects live `402` challenge & max expenditure):**
    ```bash
-   npm run spike:dry-run
+   npm run telegraph:dry-run
    ```
-   This inspects the live `ONCHAIN_TX_LOOKUP_GENERAL` Intent schema, discovers active ranked miners, performs an unpaid `POST /engine/v1/ask` request to verify the live `402 PAYMENT-REQUIRED` challenge, validates the quoted cost against the `$0.10` per-request budget cap, and exits without signing or broadcasting.
+4. **Run a gated live testnet intelligence purchase (requires local `.env` with funded wallet & `TELEGRAPH_ALLOW_LIVE_SPEND=true`):**
+   ```bash
+   npm run telegraph:live
+   ```
 
 ## End-to-End Testnet Reproduction (`NOT VERIFIED`)
 

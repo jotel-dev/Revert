@@ -16,6 +16,8 @@
     "test": "npm run test --workspaces --if-present",
     "test:contracts": "node scripts/run-forge.mjs test -vv",
     "spike:dry-run": "npm --workspace=@revert/telegraph-spike run dry-run",
+    "telegraph:dry-run": "npm --workspace=@revert/telegraph-client run dry-run",
+    "telegraph:live": "npm --workspace=@revert/telegraph-client run live",
     "check": "npm run format:check && npm run lint && npm run typecheck && npm run build && npm run test && npm run test:contracts"
   },
   "devDependencies": {

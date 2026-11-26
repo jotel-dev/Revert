@@ -19,6 +19,7 @@ broadcast/
 *.key
 *keystore*.json
 wallet*.json
+.revert-spend-ledger.json
 
 # Test & coverage outputs
 coverage/
