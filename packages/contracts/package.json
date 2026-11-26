@@ -1,0 +1,13 @@
+{
+  "name": "@revert/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node ../../scripts/run-forge.mjs build",
+    "test": "node ../../scripts/run-forge.mjs test -vv"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.3.0"
+  }
+}
