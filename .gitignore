@@ -20,6 +20,8 @@ broadcast/
 *keystore*.json
 wallet*.json
 .revert-spend-ledger.json
+.revert-verification-state.json
+.revert-verification-state.json.tmp
 
 # Test & coverage outputs
 coverage/

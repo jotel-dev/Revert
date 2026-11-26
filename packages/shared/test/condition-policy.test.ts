@@ -54,38 +54,42 @@ describe('Condition canonicalization and deterministic policy', () => {
       valueEth: 0.1,
     });
     expect(res.decision).toBe('RELEASE');
+    expect(res.verdict).toBe('SATISFIED');
   });
 
-  it('returns INCONCLUSIVE on reverted, raw shape, unverified signal, or wrong recipient', () => {
-    expect(
-      evaluateTxLookupPolicy(
-        baseCondition,
-        { ...validResponse, result: { ...(validResponse.result as object), status: 'reverted' } },
-        true,
-      ).decision,
-    ).toBe('INCONCLUSIVE');
-
-    expect(
-      evaluateTxLookupPolicy(baseCondition, { ...validResponse, result_shape: 'raw' }, true)
-        .decision,
-    ).toBe('INCONCLUSIVE');
-
-    expect(evaluateTxLookupPolicy(baseCondition, validResponse, false).decision).toBe(
-      'INCONCLUSIVE',
+  it('distinguishes CONTRADICTED vs INCONCLUSIVE and never releases on invalid evidence', () => {
+    const reverted = evaluateTxLookupPolicy(
+      baseCondition,
+      { ...validResponse, result: { ...(validResponse.result as object), status: 'reverted' } },
+      true,
     );
+    expect(reverted.decision).toBe('INCONCLUSIVE');
+    expect(reverted.verdict).toBe('CONTRADICTED');
 
-    expect(
-      evaluateTxLookupPolicy(
-        baseCondition,
-        {
-          ...validResponse,
-          result: {
-            ...(validResponse.result as object),
-            to: '0x3333333333333333333333333333333333333333',
-          },
+    const raw = evaluateTxLookupPolicy(
+      baseCondition,
+      { ...validResponse, result_shape: 'raw' },
+      true,
+    );
+    expect(raw.decision).toBe('INCONCLUSIVE');
+    expect(raw.verdict).toBe('INCONCLUSIVE');
+
+    const unverified = evaluateTxLookupPolicy(baseCondition, validResponse, false);
+    expect(unverified.decision).toBe('INCONCLUSIVE');
+    expect(unverified.verdict).toBe('INCONCLUSIVE');
+
+    const wrongRecipient = evaluateTxLookupPolicy(
+      baseCondition,
+      {
+        ...validResponse,
+        result: {
+          ...(validResponse.result as object),
+          to: '0x3333333333333333333333333333333333333333',
         },
-        true,
-      ).decision,
-    ).toBe('INCONCLUSIVE');
+      },
+      true,
+    );
+    expect(wrongRecipient.decision).toBe('INCONCLUSIVE');
+    expect(wrongRecipient.verdict).toBe('CONTRADICTED');
   });
 });
