@@ -15,8 +15,13 @@ import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
  * @notice Programmable payment recovery (Mode A) and evidence-based conditional
  *         settlement (Mode B) escrow for allowlisted ERC-20 tokens.
  * @dev Mode B relies on an immutable per-escrow EIP-712 attestor address chosen
- *      at funding time. The attestor can only trigger release to the immutable
- *      recipient before the escrow deadline and cannot alter payment terms.
+ *      at funding time. The attestor can only trigger settlement to the immutable
+ *      recipient (RELEASE) or refund to the immutable sender (REFUND) before the
+ *      escrow deadline, bound to chainId, verifyingContract, escrowId,
+ *      conditionHash, outcome, evidence/signal/receipt hashes, nonce, and expiry.
+ *      This centralized attestor model is explicitly not trustless; post-deadline
+ *      permissionless refunds guarantee funds cannot be trapped if the attestor
+ *      or Telegraph intelligence service becomes unavailable.
  */
 contract RevertEscrow is Ownable2Step, ReentrancyGuard, EIP712 {
     using SafeERC20 for IERC20;
@@ -30,6 +35,12 @@ contract RevertEscrow is Ownable2Step, ReentrancyGuard, EIP712 {
         LOCKED,
         RELEASED,
         REFUNDED
+    }
+
+    enum SettlementOutcome {
+        NONE,
+        RELEASE,
+        REFUND
     }
 
     struct Escrow {
@@ -46,16 +57,29 @@ contract RevertEscrow is Ownable2Step, ReentrancyGuard, EIP712 {
         address attestor;
     }
 
+    struct SettlementAttestationInput {
+        uint256 escrowId;
+        SettlementOutcome outcome;
+        bytes32 evidenceHash;
+        bytes32 signalHash;
+        bytes32 receiptHash;
+        bytes32 nonce;
+        uint64 issuedAt;
+        uint64 expiresAt;
+    }
+
     bytes32 public constant SETTLEMENT_ATTESTATION_TYPEHASH = keccak256(
-        "SettlementAttestation(uint256 escrowId,bytes32 conditionHash,bytes32 evidenceHash,bytes32 signalHash,bytes32 receiptHash,uint64 expiresAt)"
+        "SettlementAttestation(uint256 escrowId,bytes32 conditionHash,uint8 outcome,bytes32 evidenceHash,bytes32 signalHash,bytes32 receiptHash,bytes32 nonce,uint64 issuedAt,uint64 expiresAt)"
     );
 
     uint64 public constant MAX_ESCROW_DURATION = 365 days;
+    uint64 public constant MAX_ATTESTATION_TTL = 1 days;
 
     uint256 public nextEscrowId = 1;
     mapping(address => bool) public allowedTokens;
     mapping(uint256 => Escrow) private _escrows;
     mapping(bytes32 => bool) public usedAttestations;
+    mapping(address => mapping(bytes32 => bool)) public usedNonces;
 
     event TokenAllowlistUpdated(address indexed token, bool allowed);
 
@@ -95,12 +119,16 @@ contract RevertEscrow is Ownable2Step, ReentrancyGuard, EIP712 {
         Mode mode,
         address indexed sender,
         address token,
-        uint256 amount
+        uint256 amount,
+        bytes32 evidenceHash,
+        bytes32 signalHash,
+        bytes32 receiptHash
     );
 
     error ZeroAddress();
     error InvalidAmount();
     error TokenNotAllowed(address token);
+    error InvalidTokenContract(address token);
     error FeeOnTransferUnsupported();
     error InvalidTimestamp(uint64 provided, uint64 current);
     error DurationTooLong(uint64 duration);
@@ -113,6 +141,10 @@ contract RevertEscrow is Ownable2Step, ReentrancyGuard, EIP712 {
     error RecoveryWindowExpired(uint64 recoveryWindowEnd, uint64 current);
     error DeadlineNotReached(uint64 deadline, uint64 current);
     error DeadlineExpired(uint64 deadline, uint64 current);
+    error InvalidOutcome(SettlementOutcome outcome);
+    error InvalidNonce();
+    error NonceAlreadyUsed(address attestor, bytes32 nonce);
+    error StaleOrFutureAttestation(uint64 issuedAt, uint64 expiresAt, uint64 current);
     error AttestationExpired(uint64 expiresAt, uint64 current);
     error InvalidProofHash();
     error AttestationAlreadyUsed(bytes32 digest);
@@ -124,21 +156,16 @@ contract RevertEscrow is Ownable2Step, ReentrancyGuard, EIP712 {
     ) Ownable(initialOwner) EIP712("RevertEscrow", "1") {
         if (initialOwner == address(0)) revert ZeroAddress();
         for (uint256 i = 0; i < initialAllowedTokens.length; i++) {
-            address token = initialAllowedTokens[i];
-            if (token == address(0)) revert ZeroAddress();
-            allowedTokens[token] = true;
-            emit TokenAllowlistUpdated(token, true);
+            _setAllowedToken(initialAllowedTokens[i], true);
         }
     }
 
     /**
      * @notice Updates whether an ERC-20 token may be used for new escrows.
-     * @dev Does not affect already-funded escrows, which remain withdrawable/refundable.
+     * @dev Does not affect already-funded escrows, which remain claimable/refundable.
      */
     function setAllowedToken(address token, bool allowed) external onlyOwner {
-        if (token == address(0)) revert ZeroAddress();
-        allowedTokens[token] = allowed;
-        emit TokenAllowlistUpdated(token, allowed);
+        _setAllowedToken(token, allowed);
     }
 
     /**
@@ -152,24 +179,24 @@ contract RevertEscrow is Ownable2Step, ReentrancyGuard, EIP712 {
 
     /**
      * @notice Computes the EIP-712 digest that must be signed by `escrow.attestor`.
+     * @dev Domain separator automatically binds `block.chainid` and `address(this)`.
      */
     function hashSettlementAttestation(
-        uint256 escrowId,
-        bytes32 conditionHash,
-        bytes32 evidenceHash,
-        bytes32 signalHash,
-        bytes32 receiptHash,
-        uint64 expiresAt
+        SettlementAttestationInput calldata input,
+        bytes32 conditionHash
     ) public view returns (bytes32) {
         bytes32 structHash = keccak256(
             abi.encode(
                 SETTLEMENT_ATTESTATION_TYPEHASH,
-                escrowId,
+                input.escrowId,
                 conditionHash,
-                evidenceHash,
-                signalHash,
-                receiptHash,
-                expiresAt
+                uint8(input.outcome),
+                input.evidenceHash,
+                input.signalHash,
+                input.receiptHash,
+                input.nonce,
+                input.issuedAt,
+                input.expiresAt
             )
         );
         return _hashTypedDataV4(structHash);
@@ -241,7 +268,10 @@ contract RevertEscrow is Ownable2Step, ReentrancyGuard, EIP712 {
             Mode.Protected,
             escrow.sender,
             escrow.token,
-            escrow.amount
+            escrow.amount,
+            bytes32(0),
+            bytes32(0),
+            bytes32(0)
         );
     }
 
@@ -324,63 +354,84 @@ contract RevertEscrow is Ownable2Step, ReentrancyGuard, EIP712 {
     }
 
     /**
-     * @notice Mode B: Settles conditional escrow to immutable `recipient` with
-     *         an EIP-712 attestation signed by `escrow.attestor` and non-zero
-     *         Telegraph evidence/signal/receipt commitments.
+     * @notice Mode B: Settles conditional escrow via EIP-712 attestation signed by
+     *         `escrow.attestor`. Supports RELEASE (to immutable recipient) or
+     *         REFUND (to immutable sender) strictly on or before `escrow.deadline`.
      */
     function settleConditional(
-        uint256 escrowId,
-        bytes32 evidenceHash,
-        bytes32 signalHash,
-        bytes32 receiptHash,
-        uint64 expiresAt,
+        SettlementAttestationInput calldata input,
         bytes calldata signature
     ) external nonReentrant {
-        Escrow storage escrow = _requireEscrow(escrowId, Mode.Conditional);
+        Escrow storage escrow = _requireEscrow(input.escrowId, Mode.Conditional);
 
         uint64 nowTs = SafeCast.toUint64(block.timestamp);
         if (nowTs > escrow.deadline) revert DeadlineExpired(escrow.deadline, nowTs);
-        if (nowTs > expiresAt) revert AttestationExpired(expiresAt, nowTs);
+        if (nowTs > input.expiresAt) revert AttestationExpired(input.expiresAt, nowTs);
         if (
-            evidenceHash == bytes32(0) ||
-            signalHash == bytes32(0) ||
-            receiptHash == bytes32(0)
+            input.issuedAt > nowTs ||
+            input.expiresAt <= input.issuedAt ||
+            input.expiresAt - input.issuedAt > MAX_ATTESTATION_TTL
+        ) {
+            revert StaleOrFutureAttestation(input.issuedAt, input.expiresAt, nowTs);
+        }
+        if (
+            input.outcome != SettlementOutcome.RELEASE &&
+            input.outcome != SettlementOutcome.REFUND
+        ) {
+            revert InvalidOutcome(input.outcome);
+        }
+        if (input.nonce == bytes32(0)) revert InvalidNonce();
+        if (usedNonces[escrow.attestor][input.nonce]) {
+            revert NonceAlreadyUsed(escrow.attestor, input.nonce);
+        }
+        if (
+            input.evidenceHash == bytes32(0) ||
+            input.signalHash == bytes32(0) ||
+            input.receiptHash == bytes32(0)
         ) {
             revert InvalidProofHash();
         }
 
-        bytes32 digest = hashSettlementAttestation(
-            escrowId,
-            escrow.conditionHash,
-            evidenceHash,
-            signalHash,
-            receiptHash,
-            expiresAt
-        );
+        bytes32 digest = hashSettlementAttestation(input, escrow.conditionHash);
         if (usedAttestations[digest]) revert AttestationAlreadyUsed(digest);
 
         address recovered = ECDSA.recover(digest, signature);
         if (recovered != escrow.attestor) revert InvalidAttestorSignature();
 
         usedAttestations[digest] = true;
-        escrow.state = State.RELEASED;
+        usedNonces[escrow.attestor][input.nonce] = true;
 
-        IERC20(escrow.token).safeTransfer(escrow.recipient, escrow.amount);
-
-        emit EscrowReleased(
-            escrowId,
-            Mode.Conditional,
-            escrow.recipient,
-            escrow.token,
-            escrow.amount,
-            evidenceHash,
-            signalHash,
-            receiptHash
-        );
+        if (input.outcome == SettlementOutcome.RELEASE) {
+            escrow.state = State.RELEASED;
+            IERC20(escrow.token).safeTransfer(escrow.recipient, escrow.amount);
+            emit EscrowReleased(
+                input.escrowId,
+                Mode.Conditional,
+                escrow.recipient,
+                escrow.token,
+                escrow.amount,
+                input.evidenceHash,
+                input.signalHash,
+                input.receiptHash
+            );
+        } else {
+            escrow.state = State.REFUNDED;
+            IERC20(escrow.token).safeTransfer(escrow.sender, escrow.amount);
+            emit EscrowRefunded(
+                input.escrowId,
+                Mode.Conditional,
+                escrow.sender,
+                escrow.token,
+                escrow.amount,
+                input.evidenceHash,
+                input.signalHash,
+                input.receiptHash
+            );
+        }
     }
 
     /**
-     * @notice Mode B: Refunds locked funds to `sender` after `deadline` expires.
+     * @notice Mode B: Permissionlessly refunds locked funds to `sender` strictly after `deadline`.
      */
     function refundExpired(uint256 escrowId) external nonReentrant {
         Escrow storage escrow = _requireEscrow(escrowId, Mode.Conditional);
@@ -398,8 +449,18 @@ contract RevertEscrow is Ownable2Step, ReentrancyGuard, EIP712 {
             Mode.Conditional,
             escrow.sender,
             escrow.token,
-            escrow.amount
+            escrow.amount,
+            bytes32(0),
+            bytes32(0),
+            bytes32(0)
         );
+    }
+
+    function _setAllowedToken(address token, bool allowed) private {
+        if (token == address(0)) revert ZeroAddress();
+        if (allowed && token.code.length == 0) revert InvalidTokenContract(token);
+        allowedTokens[token] = allowed;
+        emit TokenAllowlistUpdated(token, allowed);
     }
 
     function _requireEscrow(
