@@ -7,9 +7,10 @@
 
 ## Mandatory Eligibility & Judging Criteria
 
-- [ ] Genuine autonomous M2M purchase on Telegraph with real receipts (`receipt_hash`, `signal_hash`) — **NOT VERIFIED** (Phase 4)
-- [ ] Reproducible success and failure test cases with observed cost & latency — **NOT VERIFIED** (Phase 4)
-- [ ] Star `https://github.com/telegraphprotocol/bounties` from submitting GitHub account — **OWNER ACTION**
-- [ ] Official Season II form submission on `hackathon.telegraphprotocol.com` / `anjoman.ai` — **OWNER ACTION**
-- [ ] 2–5 minute screen-recorded demo + 5-question commercial summary — **PENDING (Phase 5)**
-- [ ] Organic growth & developer activation (20 pts): `>= 3` original public updates on separate dates, walkthrough/tutorial, and independent developer testing — **OWNER ACTION**
+- [x] **Local & Mocked Full-Stack Verification:** `npm run check` (`23` Vitest + `10` Foundry unit/fuzz/invariant), `npm run test:e2e` (`5` Playwright responsive/UI), and `npm run test:fullstack` (`18` Anvil + Fastify + Chromium scenarios) passing on `feat/protocol-foundation`.
+- [x] **Documentation & Developer Enablement (Phase 8):** Complete `README.md`, `docs/telegraph-tutorial.md`, `examples/telegraph-conditional-check.mjs`, `docs/reviewer-guide.md`, `docs/security-review.md`, and `docs/community-activation.md`.
+- [ ] **Genuine Live Autonomous M2M Purchase on Telegraph (`receipt_hash`, `signal_hash`)** — `NOT VERIFIED` (`BLOCKER-003`: awaiting local `.env` with funded disposable Sepolia wallets & owner broadcast authorization).
+- [ ] **Live Ethereum Sepolia Contract Deployment & End-to-End Flows** — `NOT VERIFIED` (`BLOCKER-003`: predeployment report verified; deployment held pending Phase 7 wallet provisioning & authorization).
+- [ ] **Star `https://github.com/telegraphprotocol/bounties`** from submitting GitHub account — **OWNER ACTION**.
+- [ ] **Publish `>= 3` Original Public Updates on Separate Dates + Gather Independent Developer Feedback** (20 pts community activation) — **OWNER ACTION** (drafts ready in [community-activation.md](community-activation.md)).
+- [ ] **2–5 Minute Screen-Recorded Demo + Official Season II Submission** on `hackathon.telegraphprotocol.com` / `anjoman.ai` — **OWNER ACTION** (after Phase 7 live Sepolia execution).
