@@ -470,6 +470,20 @@ export class TelegraphClient {
       throw new Error('Escrow 402 option missing extra.message signing template');
     }
 
+    // Security check: verify human-readable template matches machine-validated challenge fields
+    const amountMatch = template.match(/Amount:\s*(\d+)\s*uUSDC/);
+    const payToMatch = template.match(/Pay To:\s*(0x[a-fA-F0-9]{40})/i);
+    const networkMatch = template.match(/Network:\s*([^\s\n]+)/);
+    if (!amountMatch || amountMatch[1] !== option.amount) {
+      throw new Error('Escrow signing template Amount does not match challenge option.amount');
+    }
+    if (!payToMatch || payToMatch[1]!.toLowerCase() !== option.payTo.toLowerCase()) {
+      throw new Error('Escrow signing template Pay To does not match challenge option.payTo');
+    }
+    if (!networkMatch || networkMatch[1] !== option.network) {
+      throw new Error('Escrow signing template Network does not match challenge option.network');
+    }
+
     const nowSec = Math.floor(Date.now() / 1000);
     const validAfter = nowSec - 5;
     const validBefore = nowSec + 100; // <= 120s required by Telegraph

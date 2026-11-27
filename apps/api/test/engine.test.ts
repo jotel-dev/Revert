@@ -392,7 +392,8 @@ describe('[MOCKED] VerificationEngine workflow, deduplication, and safety', () =
     });
 
     const dry = await engine.verifyEscrow('1', { dryRun: true, force: true });
-    expect(dry.status).toBe('DRY_RUN_READY');
+    expect(dry.status).toBe('INCONCLUSIVE');
+    expect(dry.latestEvidence?.idempotencyKey).toBe('dry-run-1');
     expect(dry.latestEvidence?.observedCostUusdc).toBe('0');
     expect(dry.attestation).toBeUndefined();
 

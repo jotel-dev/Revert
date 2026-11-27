@@ -277,6 +277,10 @@ export class VerificationEngine {
       throw new Error(view.eligibilityReason ?? 'Escrow is not eligible for verification');
     }
 
+    if (existing.status === 'BROADCASTED') {
+      return existing;
+    }
+
     if (
       existing.status === 'SATISFIED' &&
       existing.attestation &&
@@ -300,9 +304,9 @@ export class VerificationEngine {
 
       const dryRecord: VerificationJobRecord = {
         ...existing,
-        status: 'DRY_RUN_READY',
+        status: existing.status === 'PENDING' ? 'DRY_RUN_READY' : existing.status,
         lastAttemptAt: new Date(now * 1000).toISOString(),
-        latestEvidence: {
+        latestEvidence: existing.latestEvidence ?? {
           recordedAt: new Date(now * 1000).toISOString(),
           idempotencyKey: `dry-run-${escrowId}`,
           rail: drySummary.inspection.selectedOption.scheme,

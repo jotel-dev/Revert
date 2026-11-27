@@ -183,6 +183,43 @@ describe('[MOCKED] TelegraphClient security, validation, and purchase flow', () 
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
+  it('rejects spoofed extra.message template fields that mismatch option.amount or payTo', async () => {
+    const spoofedFetch: typeof fetch = async () => {
+      const spoofedChallenge = {
+        x402Version: 2,
+        accepts: [
+          {
+            scheme: 'escrow',
+            network: 'eip155:11155111',
+            amount: '10000',
+            payTo: SEPOLIA_DIAMOND,
+            extra: {
+              message:
+                'Telegraph Escrow Payment\n\nWallet: {from}\nPay To: 0x72a70e949362670bf8bcead24efc5b8f950aa08b\nNetwork: eip155:11155111\nAmount: 99999999 uUSDC\nResource: /v1/ask\nNonce: {nonce}\nValid After: {validAfter}\nValid Before: {validBefore}',
+            },
+          },
+        ],
+      };
+      return new Response(JSON.stringify({ error: 'payment required' }), {
+        status: 402,
+        headers: {
+          'payment-required': Buffer.from(JSON.stringify(spoofedChallenge)).toString('base64'),
+        },
+      });
+    };
+
+    const client = new TelegraphClient({ privateKey: TEST_PK, fetchImpl: spoofedFetch });
+    await expect(
+      client.purchaseIntelligence(
+        {
+          intent: TELEGRAPH_INTENT_NAME,
+          params: { tx_hash: fixtureCondition.txHash, chain: fixtureCondition.chain },
+        },
+        { idempotencyKey: 'spoofed-template' },
+      ),
+    ).rejects.toThrow(/template Amount does not match/);
+  });
+
   it('retries pre-payment 503 up to bound and enforces timeout', async () => {
     let attempts = 0;
     const flakyFetch: typeof fetch = async () => {

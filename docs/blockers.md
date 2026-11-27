@@ -2,15 +2,15 @@
 
 ## Active Blockers
 
-### BLOCKER-003 — Testnet Wallets & Sepolia ETH Funding (Required for Phase 4)
-- **Severity:** High (blocks Phase 4 deployment & live paid Telegraph requests)
+### BLOCKER-003 — Testnet Wallets & Sepolia Funding (Required for Live Sepolia E2E & Paid Telegraph Purchase)
+- **Severity:** High (blocks live Sepolia deployment and genuine paid Telegraph execution)
 - **Category:** Credentials / Funding
-- **What is blocked:** Deploying `RevertEscrow.sol` to Sepolia, minting/depositing test USDC into Telegraph Diamond, and executing live paid Telegraph requests.
+- **What is blocked:** Deploying `RevertEscrow.sol` to live Ethereum Sepolia, depositing test USDC into Telegraph Diamond (`0x72a70e949362670Bf8bceAd24eFC5b8f950aa08b`), and executing real paid M2M Telegraph requests (`npm run telegraph:live`).
 - **Exact error:** No `.env` file or funded disposable Sepolia wallets exist in `C:\Users\PC\Desktop\Revert` (only `.env.example` is present).
-- **Root cause:** Verified — fresh repository; secrets and testnet funding must be configured locally by the owner.
-- **What can continue independently:** Phases 2 and 3 (contracts, local Foundry tests, shared policy, backend API, mocked Vitest tests).
-- **What is needed from the owner:** Configure local `.env` with disposable Sepolia wallets (`DEPLOYER_PRIVATE_KEY`, `TELEGRAPH_PAYER_PRIVATE_KEY`, `ATTESTOR_PRIVATE_KEY`) funded with ~`0.05` Sepolia ETH before Phase 4.
-- **Impact on deadline / eligibility:** Mandatory M2M paid Telegraph purchase requires this in Phase 4.
+- **Root cause:** Verified — secrets and testnet funds must be provisioned locally by the project owner.
+- **What has completed independently:** Phases 1–6 (contracts, Foundry unit/fuzz/invariant suites, shared policy, reusable Telegraph client, Fastify backend, React/Vite UI, Playwright responsive suite, full-stack 18-scenario Anvil + Fastify + Chromium E2E harness, and Phase 6 security review).
+- **What is needed from the owner:** Configure local `.env` with disposable Sepolia wallets (`DEPLOYER_PRIVATE_KEY`, `TELEGRAPH_PAYER_PRIVATE_KEY`, `ATTESTOR_PRIVATE_KEY`) funded with ~`0.05` Sepolia ETH + test USDC (`0xcc194e1a843B658526D0D5C431f670028582Ae17`) before live testnet execution.
+- **Impact on deadline / eligibility:** Mandatory paid M2M Telegraph purchase on Sepolia requires these credentials/funds prior to Dec 1, 2026 submission.
 
 ### BLOCKER-004 — Hackathon Account-Side Prerequisites
 - **Severity:** Medium
@@ -20,7 +20,7 @@
 ## Resolved Blockers
 
 ### BLOCKER-001 — Workspace / Repository Mismatch (`RESOLVED` `2026-11-26`)
-- Cloned `https://github.com/jotel-dev/Revert.git` to `C:\Users\PC\Desktop\Revert` and created branch `feat/protocol-foundation`.
+- Cloned `https://github.com/jotel-dev/Revert.git` to `C:\Users\PC\Desktop\Revert` and checked out feature branch `feat/protocol-foundation`.
 
 ### BLOCKER-002 — Foundry Not Installed (`RESOLVED` `2026-11-26`)
 - Installed and SHA256-verified official Foundry `v1.10.0` (`forge`, `cast`, `anvil`) at `%USERPROFILE%\.foundry\bin`.

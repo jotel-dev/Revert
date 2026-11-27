@@ -107,8 +107,12 @@ export class ViemEscrowChainGateway implements EscrowChainGateway {
         conditionHash: raw.conditionHash.toLowerCase() as `0x${string}`,
         attestor: raw.attestor.toLowerCase() as `0x${string}`,
       };
-    } catch {
-      return undefined;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (/EscrowNotFound/i.test(msg)) {
+        return undefined;
+      }
+      throw err;
     }
   }
 

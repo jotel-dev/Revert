@@ -246,7 +246,16 @@ export function CreatePaymentPage() {
       const newEscrowId = (nextId - 1n).toString();
 
       if (mode === 'Conditional' && validation.condition) {
-        await apiClient.registerCondition(newEscrowId, validation.condition).catch(() => undefined);
+        try {
+          await apiClient.registerCondition(newEscrowId, validation.condition);
+        } catch (regErr) {
+          setErrorMessage(
+            `Escrow #${newEscrowId} funded on-chain, but condition registration failed: ${
+              regErr instanceof Error ? regErr.message : String(regErr)
+            }`,
+          );
+          return;
+        }
       }
 
       await refresh();

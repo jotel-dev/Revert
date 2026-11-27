@@ -16,6 +16,7 @@
     "test": "npm run test --workspaces --if-present",
     "test:contracts": "node scripts/run-forge.mjs test -vv",
     "test:e2e": "npm --workspace=@revert/web run test:e2e",
+    "test:fullstack": "node scripts/full-stack-e2e.mjs",
     "spike:dry-run": "npm --workspace=@revert/telegraph-spike run dry-run",
     "telegraph:dry-run": "npm --workspace=@revert/telegraph-client run dry-run",
     "telegraph:live": "npm --workspace=@revert/telegraph-client run live",
