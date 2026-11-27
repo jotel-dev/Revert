@@ -1,0 +1,43 @@
+services:
+  - type: web
+    name: revert-verification-api
+    runtime: node
+    plan: free
+    buildCommand: npm ci && npm run build --workspace=@revert/shared --workspace=@revert/telegraph-client --workspace=@revert/api
+    startCommand: npm --workspace=@revert/api run start
+    healthCheckPath: /health
+    envVars:
+      - key: CHAIN_ID
+        value: '11155111'
+      - key: SEPOLIA_RPC_URL
+        value: https://ethereum-sepolia-rpc.publicnode.com
+      - key: SUPPORTED_USDC_ADDRESS
+        value: '0xcc194e1a843B658526D0D5C431f670028582Ae17'
+      - key: TELEGRAPH_DIAMOND_ADDRESS
+        value: '0x72a70e949362670Bf8bceAd24eFC5b8f950aa08b'
+      - key: TELEGRAPH_NODE_URL
+        value: https://devnode.telegraphprotocol.com
+      - key: TELEGRAPH_PAYMENT_RAIL
+        value: escrow
+      - key: MAX_PER_REQUEST_UUSDC
+        value: '100000'
+      - key: MAX_TOTAL_BUDGET_UUSDC
+        value: '2000000'
+      - key: TELEGRAPH_ALLOW_LIVE_SPEND
+        value: 'false'
+      - key: ENABLE_SERVER_BROADCASTER
+        value: 'false'
+      - key: API_HOST
+        value: 0.0.0.0
+      - key: API_PORT
+        value: '10000'
+      - key: REVERT_ESCROW_ADDRESS
+        sync: false
+      - key: ATTESTOR_PRIVATE_KEY
+        sync: false
+      - key: TELEGRAPH_PAYER_PRIVATE_KEY
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false
+      - key: API_AUTH_TOKEN
+        sync: false

@@ -1,3 +1,6 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   AsyncSpendGuard,
@@ -101,6 +104,68 @@ describe('[FIXTURE] AsyncSpendGuard concurrency, caps, and idempotency', () => {
         maxAuthorizedUusdc: 50_000n,
       }),
     ).resolves.toBeUndefined();
+  });
+
+  it('enforces aggregate cap across concurrent guard instances and restarts', async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'revert-spend-lock-'));
+    const ledgerPath = path.join(tmpDir, 'ledger.json');
+    try {
+      const policy = {
+        maxPerRequestUusdc: 60_000n,
+        maxTotalBudgetUusdc: 100_000n,
+      };
+      const workerA = new AsyncSpendGuard(policy, ledgerPath);
+      const workerB = new AsyncSpendGuard(policy, ledgerPath);
+
+      const res = await Promise.allSettled([
+        workerA.reserve({
+          idempotencyKey: 'proc-a',
+          intent: 'ONCHAIN_TX_LOOKUP_GENERAL',
+          rail: 'escrow',
+          network: 'eip155:11155111',
+          maxAuthorizedUusdc: 60_000n,
+        }),
+        workerB.reserve({
+          idempotencyKey: 'proc-b',
+          intent: 'ONCHAIN_TX_LOOKUP_GENERAL',
+          rail: 'escrow',
+          network: 'eip155:11155111',
+          maxAuthorizedUusdc: 60_000n,
+        }),
+      ]);
+
+      const fulfilled = res.filter((r) => r.status === 'fulfilled');
+      const rejected = res.filter((r) => r.status === 'rejected');
+      expect(fulfilled).toHaveLength(1);
+      expect(rejected).toHaveLength(1);
+
+      const winnerKey = fulfilled[0] && workerA.getExistingRecord('proc-a') ? 'proc-a' : 'proc-b';
+      const winner = winnerKey === 'proc-a' ? workerA : workerB;
+      await winner.finalize({
+        idempotencyKey: winnerKey,
+        succeeded: true,
+        observedChargedUusdc: 50_000n,
+        accountForMaxAuthorized: true,
+        receiptHash: '0xreceipt-multi',
+      });
+
+      // Restarted fresh instance reads committed 60,000 uUSDC and rejects another 60,000 uUSDC
+      const restarted = new AsyncSpendGuard(policy, ledgerPath);
+      expect(restarted.getSummary().committedUusdc).toBe(60_000n);
+      expect(restarted.getSummary().remainingUusdc).toBe(40_000n);
+
+      await expect(
+        restarted.reserve({
+          idempotencyKey: 'proc-c',
+          intent: 'ONCHAIN_TX_LOOKUP_GENERAL',
+          rail: 'escrow',
+          network: 'eip155:11155111',
+          maxAuthorizedUusdc: 60_000n,
+        }),
+      ).rejects.toThrow(/exceeds aggregate cap/);
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
   });
 });
 

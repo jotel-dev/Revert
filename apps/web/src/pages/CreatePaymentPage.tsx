@@ -1,7 +1,7 @@
 import {
   computeConditionHash,
   conditionalTxConditionSchema,
-  supportedTargetChainSchema,
+  SUPPORTED_TARGET_CHAINS,
   TELEGRAPH_INTENT_NAME,
   type ConditionalTxCondition,
   type SupportedTargetChain,
@@ -10,7 +10,7 @@ import { ArrowLeft, CheckCircle2, Loader2, ShieldCheck } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { isAddress } from 'viem';
-import { useAccount, useBalance, usePublicClient, useReadContract, useWriteContract } from 'wagmi';
+import { useAccount, usePublicClient, useReadContract, useWriteContract } from 'wagmi';
 import { AlertBox, Badge, Button, Input, Label, Panel } from '../components/ui.js';
 import { useRevertData } from '../context/RevertDataContext.js';
 import { apiClient } from '../lib/api-client.js';
@@ -54,9 +54,11 @@ export function CreatePaymentPage() {
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const { data: usdcBalance } = useBalance({
-    address,
-    token: SEPOLIA_TEST_USDC_ADDRESS,
+  const { data: usdcBalance } = useReadContract({
+    address: SEPOLIA_TEST_USDC_ADDRESS,
+    abi: ERC20_ABI,
+    functionName: 'balanceOf',
+    args: address ? [address] : undefined,
     chainId: SEPOLIA_CHAIN_ID,
     query: { enabled: Boolean(address && chainId === SEPOLIA_CHAIN_ID && dataMode === 'live') },
   });
@@ -89,11 +91,9 @@ export function CreatePaymentPage() {
       dataMode === 'live' &&
       isConnected &&
       usdcBalance !== undefined &&
-      amountAtomic > usdcBalance.value
+      amountAtomic > usdcBalance
     ) {
-      errors.push(
-        `Insufficient Test USDC balance (${formatUsdc(usdcBalance.value)} USDC available).`,
-      );
+      errors.push(`Insufficient Test USDC balance (${formatUsdc(usdcBalance)} USDC available).`);
     }
 
     let condition: ConditionalTxCondition | undefined;
@@ -385,7 +385,7 @@ export function CreatePaymentPage() {
                 />
                 {dataMode === 'live' && isConnected && usdcBalance !== undefined && (
                   <p className="text-xs text-[#525B6C] tabular-nums">
-                    Wallet balance: {formatUsdc(usdcBalance.value)} USDC
+                    Wallet balance: {formatUsdc(usdcBalance)} USDC
                   </p>
                 )}
               </div>
@@ -433,7 +433,7 @@ export function CreatePaymentPage() {
                       onChange={(e) => setTargetChain(e.target.value as SupportedTargetChain)}
                       className="w-full min-h-[44px] rounded-lg border border-[#D0D5DD] bg-white px-3 text-sm text-[#0B0F17]"
                     >
-                      {supportedTargetChainSchema.options.map((c) => (
+                      {SUPPORTED_TARGET_CHAINS.map((c) => (
                         <option key={c} value={c}>
                           {c}
                         </option>

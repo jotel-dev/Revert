@@ -13,7 +13,7 @@ export const txHashSchema = z
   .regex(/^0x[a-fA-F0-9]{64}$/, 'Must be a valid 32-byte hex transaction hash')
   .transform((v) => v.toLowerCase() as `0x${string}`);
 
-export const supportedTargetChainSchema = z.enum([
+export const SUPPORTED_TARGET_CHAINS = [
   'ethereum',
   'sepolia',
   'base',
@@ -21,7 +21,9 @@ export const supportedTargetChainSchema = z.enum([
   'arbitrum',
   'optimism',
   'polygon',
-]);
+] as const;
+
+export const supportedTargetChainSchema = z.enum(SUPPORTED_TARGET_CHAINS);
 
 export type SupportedTargetChain = z.infer<typeof supportedTargetChainSchema>;
 

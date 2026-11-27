@@ -22,7 +22,7 @@
     "react-router-dom": "^7.6.0",
     "tailwind-merge": "^3.3.0",
     "viem": "^2.38.0",
-    "wagmi": "^2.15.6"
+    "wagmi": "^3.7.11"
   },
   "devDependencies": {
     "@playwright/test": "^1.52.0",

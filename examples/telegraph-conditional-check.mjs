@@ -82,9 +82,11 @@ async function main() {
     verifySignal: true,
   });
 
-  const verdict = evaluateTxLookupPolicy(condition, purchase.response, {
-    signalVerified: Boolean(purchase.signalVerification?.verified),
-  });
+  const verdict = evaluateTxLookupPolicy(
+    condition,
+    purchase.response,
+    Boolean(purchase.signalVerification?.verified),
+  );
 
   console.log(
     JSON.stringify(

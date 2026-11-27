@@ -12,9 +12,9 @@ import {
 } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { Link, NavLink } from 'react-router-dom';
-import { useAccount, useBalance, useConnect, useDisconnect, useSwitchChain } from 'wagmi';
+import { useAccount, useConnect, useDisconnect, useReadContract, useSwitchChain } from 'wagmi';
 import { useRevertData } from '../context/RevertDataContext.js';
-import { SEPOLIA_CHAIN_ID, SEPOLIA_TEST_USDC_ADDRESS } from '../lib/contracts.js';
+import { ERC20_ABI, SEPOLIA_CHAIN_ID, SEPOLIA_TEST_USDC_ADDRESS } from '../lib/contracts.js';
 import { cn, formatUsdc, shortAddress } from '../lib/utils.js';
 import { Badge, Button } from './ui.js';
 
@@ -33,9 +33,11 @@ export function Layout({ children }: { children: ReactNode }) {
   const { disconnect } = useDisconnect();
   const { switchChain, isPending: isSwitchPending } = useSwitchChain();
 
-  const { data: usdcBalance } = useBalance({
-    address,
-    token: SEPOLIA_TEST_USDC_ADDRESS,
+  const { data: usdcBalance } = useReadContract({
+    address: SEPOLIA_TEST_USDC_ADDRESS,
+    abi: ERC20_ABI,
+    functionName: 'balanceOf',
+    args: address ? [address] : undefined,
     chainId: SEPOLIA_CHAIN_ID,
     query: { enabled: Boolean(address && chainId === SEPOLIA_CHAIN_ID) },
   });
@@ -176,7 +178,7 @@ export function Layout({ children }: { children: ReactNode }) {
                 </span>
                 {usdcBalance !== undefined && !isWrongNetwork && (
                   <Badge tone="neutral" className="tabular-nums">
-                    {formatUsdc(usdcBalance.value)} USDC
+                    {formatUsdc(usdcBalance)} USDC
                   </Badge>
                 )}
                 <button
