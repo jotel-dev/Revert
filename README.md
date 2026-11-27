@@ -143,6 +143,16 @@ npm run telegraph:dry-run
 node examples/telegraph-conditional-check.mjs
 ```
 
+### Live Integration Reproduction (`TESTNET` — Requires Owner `.env`)
+
+1. Copy `.env.example` to `.env` locally with funded disposable Sepolia wallets (`DEPLOYER_PRIVATE_KEY`, `TELEGRAPH_PAYER_PRIVATE_KEY`, `ATTESTOR_PRIVATE_KEY`).
+2. Deposit Test USDC (`0xcc194e1a843B658526D0D5C431f670028582Ae17`) into Telegraph Diamond (`0x72a70e949362670Bf8bceAd24eFC5b8f950aa08b`) via `LedgerFacet.depositUSDC(amount)`.
+3. Run a bounded live Telegraph purchase (`TELEGRAPH_ALLOW_LIVE_SPEND=true` inside local `.env`):
+   ```bash
+   npm run telegraph:live
+   ```
+4. Deploy `RevertEscrow.sol` (`BROADCAST=true forge script ...`), set `REVERT_ESCROW_ADDRESS`, `VITE_REVERT_ESCROW_ADDRESS`, and `VITE_ATTESTOR_ADDRESS`, start `@revert/api` and `@revert/web`, and settle a Mode B conditional escrow on Sepolia (`NOT VERIFIED` locally until `.env` is provisioned — see [docs/blockers.md](docs/blockers.md)).
+
 ### Failure-Case Reproduction
 
 1. **Spoofed `402` challenge template / Spending-cap breach / Duplicate request:** Covered deterministically in [client.test.ts](packages/telegraph-client/test/client.test.ts) and [engine.test.ts](apps/api/test/engine.test.ts).
