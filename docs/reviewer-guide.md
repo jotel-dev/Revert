@@ -18,6 +18,10 @@
    ```bash
    npm run telegraph:live
    ```
+5. **Run Playwright browser E2E & responsive checks (`320px..1440px`):**
+   ```bash
+   npm run test:e2e
+   ```
 
 ## End-to-End Testnet Reproduction (`NOT VERIFIED`)
 

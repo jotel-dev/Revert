@@ -9,13 +9,17 @@ export default tseslint.config(
       '**/out/**',
       '**/cache/**',
       '**/broadcast/**',
+      '**/playwright-report/**',
+      '**/test-results/**',
       'packages/contracts/lib/**',
     ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
+    files: ['**/*.ts', '**/*.tsx'],
     rules: {
+      'no-undef': 'off',
       '@typescript-eslint/no-unused-vars': [
         'error',
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },

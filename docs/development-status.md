@@ -10,4 +10,4 @@
 | Genuine Live Telegraph Purchase | Blocked | `NOT VERIFIED` | Awaiting local `.env` with funded disposable testnet wallet & `TELEGRAPH_ALLOW_LIVE_SPEND=true` |
 | Fastify Backend & Attestor API | Complete | `LOCAL` + `MOCKED` | `apps/api` VerificationEngine, EIP-712 attestor, independent RPC check, rate limits, auth & Fastify routes tested |
 | Sepolia Deployment & Live M2M Purchase | Planned | `NOT VERIFIED` | Requires local `.env` with funded disposable Sepolia wallets |
-| React/Vite Fintech Frontend & E2E | Planned | `NOT VERIFIED` | Minimalist light UI + Playwright |
+| React/Vite Fintech Frontend & E2E | Complete | `LOCAL` + `MOCKED` | `apps/web` light fintech UI, wagmi/viem Sepolia wallet integration, Demo Fixtures, Playwright responsive & E2E tests |
